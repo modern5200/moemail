@@ -6,43 +6,41 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Full history for git describe + possible change detection
 
       - name: Get previous tag
         id: previoustag
-        if: github.event_name == 'push'
         run: |
-          echo "tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
-        continue-on-error: true
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@v2
         with:
-          version: 10
+          version: 9
 
-      - name: Setup Node.js 24
-        uses: actions/setup-node@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '20'
           cache: 'pnpm'
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
-
-      # 新增：诊断信息（帮助排查 Node 24 兼容性问题）
-      - name: Show environment info
-        run: |
-          echo "Node version: $(node --version)"
-          echo "pnpm version: $(pnpm --version)"
-          echo "wrangler version: $(pnpm list wrangler --depth=0 || echo 'not found')"
 
       - name: Run deploy script
         env:
@@ -59,12 +57,12 @@ jobs:
           AUTH_GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID }}
           AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
-          # 推荐添加（帮助 wrangler / Pages 识别 Node 版本）
-          NODE_VERSION: 24
+          # Pass previous tag to your deploy script (very useful for changelogs, migrations, etc.)
+          PREVIOUS_TAG: ${{ steps.previoustag.outputs.tag }}
         run: pnpm dlx tsx scripts/deploy/index.ts
 
+      # Clean up
       - name: Post deployment cleanup
-        if: always()  # 即使失败也清理
         run: |
           rm -f .env*.*
           rm -f wrangler*.json
