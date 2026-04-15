@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # 需要完整历史来获取上一个 tag
+          fetch-depth: 0
 
       - name: Get previous tag
         id: previoustag
@@ -24,18 +24,25 @@ jobs:
         continue-on-error: true
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4          # 强烈推荐升级到 v4（v2 已过时）
+        uses: pnpm/action-setup@v5
         with:
-          version: 10                       # pnpm 10 是当前主流稳定版，完美支持 Node 24
+          version: 10
 
       - name: Setup Node.js 24
-        uses: actions/setup-node@v4         # v4 依然是最推荐的（v6 也可以，但 v4 更稳定）
+        uses: actions/setup-node@v6
         with:
-          node-version: 24                  # 推荐写法（不再加引号）
+          node-version: 24
           cache: 'pnpm'
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
+
+      # 新增：诊断信息（帮助排查 Node 24 兼容性问题）
+      - name: Show environment info
+        run: |
+          echo "Node version: $(node --version)"
+          echo "pnpm version: $(pnpm --version)"
+          echo "wrangler version: $(pnpm list wrangler --depth=0 || echo 'not found')"
 
       - name: Run deploy script
         env:
@@ -52,9 +59,12 @@ jobs:
           AUTH_GOOGLE_ID: ${{ secrets.AUTH_GOOGLE_ID }}
           AUTH_GOOGLE_SECRET: ${{ secrets.AUTH_GOOGLE_SECRET }}
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          # 推荐添加（帮助 wrangler / Pages 识别 Node 版本）
+          NODE_VERSION: 24
         run: pnpm dlx tsx scripts/deploy/index.ts
 
       - name: Post deployment cleanup
+        if: always()  # 即使失败也清理
         run: |
           rm -f .env*.*
           rm -f wrangler*.json
