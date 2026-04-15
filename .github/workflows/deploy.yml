@@ -60,16 +60,3 @@ jobs:
         run: |
           rm -f .env*.*
           rm -f wrangler*.json
-   jobs:
-   build:
-    runs-on: ubuntu-latest
-    steps:
-      # 确保使用 v4 的最新小版本或 v5（如果已发布）
-      - name: Checkout code
-        uses: actions/checkout@v4 
-
-      # 如果你使用了 setup-node，也可以指定版本
-      - name: Use Node.js 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'   
