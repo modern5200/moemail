@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Get full git history for previous tag
+          fetch-depth: 0   # 需要完整历史来获取上一个 tag
 
       - name: Get previous tag
         id: previoustag
@@ -24,15 +24,15 @@ jobs:
         continue-on-error: true
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4  # 推荐升级到 v4 或 v6（v2 已不推荐）
+        uses: pnpm/action-setup@v4          # 强烈推荐升级到 v4（v2 已过时）
         with:
-          version: 10  # 或 latest / 9，根据你的 package.json 中的 packageManager 字段调整
+          version: 10                       # pnpm 10 是当前主流稳定版，完美支持 Node 24
 
       - name: Setup Node.js 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4         # v4 依然是最推荐的（v6 也可以，但 v4 更稳定）
         with:
-          node-version: 24
-          cache: 'pnpm'  # 保留 pnpm 缓存，性能更好
+          node-version: 24                  # 推荐写法（不再加引号）
+          cache: 'pnpm'
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
