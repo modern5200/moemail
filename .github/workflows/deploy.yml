@@ -9,31 +9,30 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Get full git history for checking file changes
+          fetch-depth: 0  # Get full git history for previous tag
 
       - name: Get previous tag
         id: previoustag
         if: github.event_name == 'push'
         run: |
-          echo "tag=$(git describe --tags --abbrev=0 HEAD^)" >> $GITHUB_OUTPUT
+          echo "tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo '')" >> $GITHUB_OUTPUT
         continue-on-error: true
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4  # 推荐升级到 v4 或 v6（v2 已不推荐）
         with:
-          version: 9
+          version: 10  # 或 latest / 9，根据你的 package.json 中的 packageManager 字段调整
 
-      - name: Setup Node.js
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'pnpm'
-        
-      - name: Checkout
-        uses: actions/checkout@v6.0.2
+          node-version: 24
+          cache: 'pnpm'  # 保留 pnpm 缓存，性能更好
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
@@ -55,7 +54,6 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: pnpm dlx tsx scripts/deploy/index.ts
 
-      # Clean up
       - name: Post deployment cleanup
         run: |
           rm -f .env*.*
